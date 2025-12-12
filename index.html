@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Valyuta24 — Ob-havo (Mobile iPhone-style)</title>
+  <meta name="description" content="Valyuta24 — Mobile-first weather app. iPhone-style, liquid glass, picker wheel, soatlik va 7 kunlik prognoz.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ================= GLOBAL (mobile-first) ================= */
+    :root{
+      --max-w:430px;
+      --bg-light: #f3f8ff;
+      --bg-dark: #051622;
+      --card-light: rgba(255,255,255,0.94);
+      --card-dark: rgba(255,255,255,0.03);
+      --accent: #3b82f6;
+      --muted: #6f8aa3;
+      --glass-blur: 14px;
+      --radius:18px;
+      --shadow-lg: 0 18px 50px rgba(2,6,23,0.18);
+      --shadow-sm: 0 6px 18px rgba(2,6,23,0.08);
+      --gap:12px;
+    }
+    html,body{height:100%;margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; -webkit-text-size-adjust:100%;}
+    body{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--bg-light),#eaf4ff);color:#041427;overflow-x:hidden}
+    body.theme-dark{background:linear-gradient(180deg,var(--bg-dark),#07142a);color:#eaf2ff}
+
+    /* prevent horizontal pan */
+    html,body{touch-action:pan-y}
+
+    /* device container (acts like phone) */
+    .device{
+      width:100%;
+      max-width:var(--max-w);
+      height:100vh;
+      border-radius:20px;
+      overflow:hidden;
+      box-shadow:var(--shadow-lg);
+      background:transparent;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* safe scroll area: allow vertical scroll inside device */
+    .safe{
+      padding:16px;
+      box-sizing:border-box;
+      height:100%;
+      overflow-y:auto; /* IMPORTANT: allow vertical scroll on mobile */
+      -webkit-overflow-scrolling:touch;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    /* Header */
+    header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#7dd3fc,#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:800;color:#063143;box-shadow:var(--shadow-sm);flex-shrink:0}
+    .title h1{margin:0;font-size:16px}
+    .title p{margin:0;font-size:12px;color:var(--muted)}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{padding:8px 12px;border-radius:12px;border:none;background:rgba(255,255,255,0.92);cursor:pointer;backdrop-filter: blur(var(--glass-blur));box-shadow:var(--shadow-sm);font-weight:600}
+    .btn.icon{width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center}
+    .btn:active{transform:translateY(1px)}
+    body.theme-dark .btn{background:rgba(255,255,255,0.04)}
+
+    /* HERO */
+    .hero{
+      border-radius:18px;padding:16px;
+      background:linear-gradient(180deg,var(--card-light),rgba(255,255,255,0.92));
+      box-shadow:var(--shadow-sm);
+      backdrop-filter: blur(var(--glass-blur));
+      transition:all .28s;
+      overflow:visible;
+    }
+    body.theme-dark .hero{background:linear-gradient(180deg,var(--card-dark),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.04)}
+
+    .hero-top{display:flex;justify-content:space-between;align-items:center}
+    .region-title{font-weight:800;font-size:18px}
+    .region-local{font-size:12px;color:var(--muted)}
+    .cond-text{font-size:13px;color:var(--muted)}
+
+    .hero-main{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+    .left{display:flex;flex-direction:column;gap:8px}
+    .temp-big{font-size:62px;font-weight:800;line-height:0.9}
+    .temp-small{font-size:14px;color:var(--muted)}
+    .hero-icon img{width:110px;height:110px;display:block;filter: drop-shadow(0 6px 10px rgba(2,6,23,0.08));}
+
+    /* chips */
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .chip{padding:8px 10px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.9));border:1px solid rgba(2,6,23,0.04);font-size:13px;box-shadow:var(--shadow-sm)}
+    body.theme-dark .chip{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+
+    /* section titles */
+    .section-title{font-weight:700;margin-top:12px}
+
+    /* hourly */
+    .hourly{display:flex;gap:8px;overflow:auto;padding:12px 2px;margin-top:8px}
+    .hour{min-width:84px;padding:10px;border-radius:12px;text-align:center;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94));border:1px solid rgba(2,6,23,0.04);box-shadow:var(--shadow-sm)}
+    body.theme-dark .hour{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+    .hour small{display:block;color:var(--muted);margin-bottom:6px}
+    .hour img{width:36px;height:36px;margin:6px auto;opacity:0.95}
+
+    /* forecast (7 day) */
+    .forecast{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+    .day-card{padding:10px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9));border:1px solid rgba(2,6,23,0.04);box-shadow:var(--shadow-sm)}
+    body.theme-dark .day-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+
+    /* details */
+    .details{margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9));border:1px solid rgba(2,6,23,0.04)}
+    body.theme-dark .details{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .detail-item{padding:10px;border-radius:10px;background:rgba(255,255,255,0.92);border:1px solid rgba(2,6,23,0.04);font-size:13px}
+    body.theme-dark .detail-item{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+
+    /* picker (bottom sheet wheel) */
+    .picker-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);z-index:9997;opacity:0;pointer-events:none;transition:opacity .22s}
+    .picker{position:fixed;left:0;right:0;bottom:0;height:360px;background:linear-gradient(180deg,#fff,#f4f8ff);z-index:9998;border-radius:18px 18px 0 0;box-shadow:0 -20px 60px rgba(2,6,23,0.18);transform:translateY(110%);transition:transform .32s cubic-bezier(.2,.9,.2,1);will-change:transform}
+    .picker.open{transform:translateY(0%)}
+    .picker.dark{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))}
+    .picker .actions{display:flex;justify-content:space-between;padding:10px 12px;align-items:center}
+    .picker .wheel{height:260px;overflow:auto;-webkit-overflow-scrolling:touch;padding:6px 12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:stretch;scroll-snap-type:y mandatory}
+    .picker .item{scroll-snap-align:center;padding:12px;border-radius:12px;margin:6px 0;text-align:center;cursor:pointer;user-select:none}
+    .picker .item.center{background:linear-gradient(180deg, rgba(36,123,255,0.12), rgba(36,123,255,0.06));font-weight:800;border:1px solid rgba(36,123,255,0.12)}
+    .picker .maskTop,.picker .maskBottom{position:absolute;left:0;right:0;height:90px;pointer-events:none}
+    .picker .maskTop{top:0;background:linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,0));}
+    .picker .maskBottom{bottom:0;background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,1));}
+    body.theme-dark .picker .maskTop{background:linear-gradient(180deg, rgba(6,18,35,0.9), rgba(6,18,35,0));}
+    body.theme-dark .picker .maskBottom{background:linear-gradient(180deg, rgba(6,18,35,0), rgba(6,18,35,0.9));}
+
+    /* responsive */
+    @media (max-width:420px){
+      .temp-big{font-size:48px}
+      .hero-icon img{width:90px;height:90px}
+      .forecast{grid-template-columns:repeat(2,1fr)}
+      .hour{min-width:74px}
+    }
+
+    /* reduce motion */
+    @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body class="theme-light">
+  <div class="device" role="application" aria-label="Valyuta24 mobile weather">
+    <div class="safe" id="safeArea">
+      <!-- Header -->
+      <header>
+        <div class="brand" role="banner">
+          <div class="logo" aria-hidden="true">V24</div>
+          <div class="title">
+            <h1>Valyuta24</h1>
+            <p>Ob-havo · Oʻzbekiston</p>
+          </div>
+        </div>
+
+        <div class="controls" role="toolbar" aria-label="Boshqaruv">
+          <button id="locBtn" class="btn icon" title="Joylashuv">📍</button>
+          <button id="openPickerBtn" class="btn" aria-haspopup="true" aria-controls="picker">Viloyat</button>
+          <button id="themeBtn" class="btn icon" title="Tun/Tong">🌙</button>
+        </div>
+      </header>
+
+      <!-- HERO -->
+      <section id="hero" class="hero" aria-live="polite">
+        <div class="hero-top">
+          <div>
+            <div id="regionTitle" class="region-title">Toshkent viloyati</div>
+            <div id="regionLocal" class="region-local">—</div>
+          </div>
+          <div id="condText" class="cond-text">—</div>
+        </div>
+
+        <div class="hero-main">
+          <div class="left">
+            <div id="tempBig" class="temp-big">--°C</div>
+            <div id="tempSmall" class="temp-small">Hiss etiladi — · Namlik —%</div>
+          </div>
+          <div class="hero-icon"><img id="mainIcon" src="" alt="Ob-havo ikonkasi"></div>
+        </div>
+
+        <div id="chips" class="chips" aria-hidden="false"></div>
+
+        <h3 class="section-title">Soatlik ob-havo</h3>
+        <div id="hourly" class="hourly" role="list" aria-label="Soatlik ob-havo"></div>
+
+        <h3 class="section-title">7 kunlik prognoz</h3>
+        <div id="forecast" class="forecast" role="list" aria-label="7 kunlik prognoz"></div>
+
+        <h3 class="section-title">To'liq ma'lumot</h3>
+        <div id="details" class="details" aria-live="polite"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- picker -->
+  <div id="pickerBackdrop" class="picker-backdrop" aria-hidden="true"></div>
+  <div id="picker" class="picker" aria-hidden="true" role="dialog" aria-label="Viloyat tanlash">
+    <div class="actions">
+      <button id="pickerCancel" class="btn">Bekor</button>
+      <div class="pick-title" style="font-weight:700">Viloyatni tanlang</div>
+      <button id="pickerOk" class="btn">OK</button>
+    </div>
+
+    <div style="position:relative">
+      <div class="maskTop"></div>
+      <div class="wheel" id="wheel" tabindex="0" role="listbox" aria-label="Viloyatlar"></div>
+      <div class="maskBottom"></div>
+    </div>
+  </div>
+
+  <script>
+    /***** ========== CONFIG ========== *****/
+    const API_KEY = '4f438035bb8a457aa24111258251212'; // siz bergan kalit
+    const CACHE_TTL = 15 * 60 * 1000; // 15 min
+    const DEFAULT = {id:'toshkent_v', name:'Toshkent viloyati', q:'Tashkent, Uzbekistan'};
+
+    const REGIONS = [
+      {id:'toshkent_v', name:'Toshkent viloyati', q:'Tashkent, Uzbekistan'},
+      {id:'tashkent', name:'Toshkent shahri', q:'Tashkent, Uzbekistan'},
+      {id:'andijon', name:'Andijon viloyati', q:'Andijan, Uzbekistan'},
+      {id:'buxoro', name:'Buxoro viloyati', q:'Bukhara, Uzbekistan'},
+      {id:'fargona', name:'Fargona viloyati', q:'Fergana, Uzbekistan'},
+      {id:'jizzax', name:'Jizzax viloyati', q:'Jizzakh, Uzbekistan'},
+      {id:'namangan', name:'Namangan viloyati', q:'Namangan, Uzbekistan'},
+      {id:'navoiy', name:'Navoiy viloyati', q:'Navoi, Uzbekistan'},
+      {id:'qashqadaryo', name:'Qashqadaryo viloyati', q:'Kashkadarya, Uzbekistan'},
+      {id:'samarqand', name:'Samarqand viloyati', q:'Samarkand, Uzbekistan'},
+      {id:'sirdaryo', name:'Sirdaryo viloyati', q:'Syrdarya, Uzbekistan'},
+      {id:'surxondaryo', name:'Surxondaryo viloyati', q:'Surkhandarya, Uzbekistan'},
+      {id:'xorazm', name:'Xorazm viloyati', q:'Khorezm, Uzbekistan'}
+    ];
+
+    /***** ========== REFS ========== *****/
+    const body = document.body;
+    const safeArea = document.getElementById('safeArea');
+    const regionTitle = document.getElementById('regionTitle');
+    const regionLocal = document.getElementById('regionLocal');
+    const condText = document.getElementById('condText');
+    const tempBig = document.getElementById('tempBig');
+    const tempSmall = document.getElementById('tempSmall');
+    const mainIcon = document.getElementById('mainIcon');
+    const chipsEl = document.getElementById('chips');
+    const hourlyEl = document.getElementById('hourly');
+    const forecastEl = document.getElementById('forecast');
+    const detailsEl = document.getElementById('details');
+
+    const openPickerBtn = document.getElementById('openPickerBtn');
+    const picker = document.getElementById('picker');
+    const pickerBackdrop = document.getElementById('pickerBackdrop');
+    const wheel = document.getElementById('wheel');
+    const pickerOk = document.getElementById('pickerOk');
+    const pickerCancel = document.getElementById('pickerCancel');
+
+    const locBtn = document.getElementById('locBtn');
+    const themeBtn = document.getElementById('themeBtn');
+
+    /***** ========== STATE ========== *****/
+    let cache = loadCache();
+    let current = DEFAULT;
+    let selectedIndex = REGIONS.findIndex(r=>r.id===DEFAULT.id);
+    let theme = localStorage.getItem('v24_theme') || 'light';
+    applyTheme();
+
+    /***** ========== HELPERS ========== *****/
+    function loadCache(){ try{ return JSON.parse(localStorage.getItem('v24_cache_v_final2')) || {}; }catch(e){return {}; } }
+    function saveCache(){ try{ localStorage.setItem('v24_cache_v_final2', JSON.stringify(cache)); }catch(e){} }
+    function isFresh(entry){ return entry && (Date.now() - entry.ts < CACHE_TTL); }
+    function fmtLocal(t){ try{ const d = new Date(t.replace(' ','T')); return d.toLocaleString('uz-UZ',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}); }catch(e){return t} }
+    function toUzCondition(text){
+      const t = (text||'').toLowerCase();
+      if(t.includes('rain')||t.includes('shower')) return 'Yomg‘ir';
+      if(t.includes('cloud') && t.includes('partly')) return 'Qisman bulutli';
+      if(t.includes('cloud')) return 'Bulutli';
+      if(t.includes('sun')||t.includes('clear')) return 'Quyoshli';
+      if(t.includes('snow')) return 'Qor';
+      if(t.includes('thunder')) return 'Momaqaldiroq';
+      return text || '—';
+    }
+
+    /***** ========== FETCH ========== *****/
+    async function fetchForecast(q, days=7){
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${encodeURIComponent(q)}&days=${days}&aqi=no&alerts=no`;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('API xatosi: '+res.status);
+      return res.json();
+    }
+
+    /***** ========== RENDER HELPERS ========== *****/
+    function clearHero(){
+      regionTitle.textContent = '—';
+      regionLocal.textContent = '—';
+      condText.textContent = '—';
+      tempBig.textContent = '--°C';
+      tempSmall.textContent = 'Hiss etiladi — · Namlik —%';
+      mainIcon.src='';
+      chipsEl.innerHTML=''; hourlyEl.innerHTML=''; forecastEl.innerHTML=''; detailsEl.innerHTML='';
+    }
+
+    function renderHeroFromData(d){
+      regionTitle.textContent = d.location.name + ' · ' + d.location.country;
+      regionLocal.textContent = fmtLocal(d.location.localtime);
+      condText.textContent = toUzCondition(d.current.condition.text);
+      tempBig.textContent = Math.round(d.current.temp_c) + '°C';
+      tempSmall.textContent = `Hiss etiladi ${d.current.feelslike_c}°C · Namlik ${d.current.humidity}%`;
+      mainIcon.src = 'https:' + d.current.condition.icon;
+
+      // chips
+      chipsEl.innerHTML = '';
+      const chips = [
+        `Max ${d.forecast.forecastday[0].day.maxtemp_c}°C`,
+        `Min ${d.forecast.forecastday[0].day.mintemp_c}°C`,
+        `Shamol ${Math.round(d.current.wind_kph)} kph`,
+        `Yomg‘ir ${d.current.precip_mm} mm`
+      ];
+      chips.forEach(t=>{
+        const c = document.createElement('div'); c.className='chip'; c.textContent = t; chipsEl.appendChild(c);
+      });
+
+      // hourly (first day)
+      hourlyEl.innerHTML = '';
+      const hours = (d.forecast.forecastday[0] && d.forecast.forecastday[0].hour) ? d.forecast.forecastday[0].hour.slice(0,24) : [];
+      for(const h of hours){
+        const it = document.createElement('div'); it.className='hour';
+        const hh = new Date(h.time.replace(' ','T')).getHours();
+        it.innerHTML = `<small>${hh}:00</small><img src="${'https:'+h.condition.icon}" alt=""><div style="font-weight:700">${Math.round(h.temp_c)}°C</div><div class="muted" style="font-size:12px">${Math.round(h.wind_kph)} kph</div>`;
+        hourlyEl.appendChild(it);
+      }
+
+      // forecast 7-day
+      forecastEl.innerHTML = '';
+      for(const fd of d.forecast.forecastday){
+        const card = document.createElement('div'); card.className='day-card';
+        const dt = new Date(fd.date + 'T00:00:00');
+        const weekDay = dt.toLocaleDateString('uz-UZ',{weekday:'short', day:'numeric'});
+        card.innerHTML = `<div style="font-weight:700">${weekDay}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <img src="${'https:'+fd.day.condition.icon}" style="width:44px;height:44px;opacity:0.98">
+            <div>
+              <div style="font-weight:700">${toUzCondition(fd.day.condition.text)}</div>
+              <div class="muted">Max ${fd.day.maxtemp_c}°C · Min ${fd.day.mintemp_c}°C</div>
+            </div>
+          </div>
+          <div style="margin-top:8px" class="muted">Yomg‘ir ${fd.day.totalprecip_mm} mm · Shamol ${Math.round(fd.day.maxwind_kph)} kph</div>`;
+        forecastEl.appendChild(card);
+      }
+
+      // extended details
+      detailsEl.innerHTML = '';
+      const day0 = d.forecast.forecastday[0];
+      const detailRows = [
+        ['Quyosh chiqishi / botishi', `${day0.astro.sunrise} / ${day0.astro.sunset}`],
+        ['Namlik', `${d.current.humidity}%`],
+        ['Hiss etiluvchi', `${d.current.feelslike_c}°C`],
+        ['Dew point', `${(d.current.dewpoint_c !== undefined) ? d.current.dewpoint_c + '°C' : '—'}`],
+        ['Bosim', `${d.current.pressure_mb} mb`],
+        ['Ko‘rinish', `${d.current.vis_km} km`],
+        ['UV indeksi', `${d.current.uv}`],
+        ['Shamol yo‘nalishi', `${d.current.wind_dir}`],
+        ['Gust (maks)', `${d.current.gust_kph} kph`],
+        ['Yomg‘ir ehtimoli (kun)', `${day0.day.daily_chance_of_rain ?? '—'}%`]
+      ];
+      const grid = document.createElement('div'); grid.className='detail-grid';
+      for(const r of detailRows){
+        const div = document.createElement('div'); div.className='detail-item';
+        div.innerHTML = `<div style="color:var(--muted);font-size:13px">${r[0]}</div><div style="font-weight:700;margin-top:6px">${r[1]}</div>`;
+        grid.appendChild(div);
+      }
+      detailsEl.appendChild(grid);
+    }
+
+    /***** ========== WHEEL (picker) ========== *****/
+    function buildWheel(){
+      wheel.innerHTML = '';
+      const pad = 3;
+      for(let i=0;i<pad;i++){ const p = document.createElement('div'); p.className='item'; p.innerHTML=''; wheel.appendChild(p); }
+      REGIONS.forEach((r, idx)=>{
+        const it = document.createElement('div'); it.className='item'; it.textContent = r.name; it.dataset.idx = idx;
+        it.addEventListener('click', ()=> { scrollToIndex(idx); });
+        wheel.appendChild(it);
+      });
+      for(let i=0;i<pad;i++){ const p = document.createElement('div'); p.className='item'; p.innerHTML=''; wheel.appendChild(p); }
+
+      // scroll to selected
+      setTimeout(()=> scrollToIndex(selectedIndex), 80);
+      wheel.addEventListener('scroll', throttle(()=> updateWheelCenter(), 60));
+    }
+
+    function scrollToIndex(idx){
+      const pad = 3;
+      const items = wheel.querySelectorAll('.item');
+      const target = items[pad + idx];
+      if(!target) return;
+      // scroll so target is centered
+      const wheelRect = wheel.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const offset = (targetRect.top + targetRect.height/2) - (wheelRect.top + wheelRect.height/2);
+      wheel.scrollBy({top: offset, behavior:'smooth'});
+      setTimeout(()=> updateWheelCenter(), 260);
+    }
+
+    function updateWheelCenter(){
+      const items = wheel.querySelectorAll('.item');
+      const wheelRect = wheel.getBoundingClientRect();
+      const centerY = wheelRect.top + wheelRect.height/2;
+      let bestIdx = -1; let bestDiff = Infinity;
+      items.forEach((it, i)=>{
+        const r = it.getBoundingClientRect();
+        const mid = r.top + r.height/2;
+        const diff = Math.abs(mid - centerY);
+        it.classList.remove('center');
+        if(diff < bestDiff){ bestDiff = diff; bestIdx = i; }
+      });
+      if(bestIdx >= 0){
+        items[bestIdx].classList.add('center');
+        const pad = 3;
+        const dataIdx = bestIdx - pad;
+        if(dataIdx >=0 && dataIdx < REGIONS.length) selectedIndex = dataIdx;
+      }
+    }
+
+    function throttle(fn, wait){
+      let last=0;
+      return function(...args){ const now = Date.now(); if(now-last >= wait){ last = now; fn.apply(this,args); last = now; } }
+    }
+
+    /***** ========== PICKER CONTROLS ========== *****/
+    function openPicker(){ picker.classList.add('open'); pickerBackdrop.style.opacity='1'; pickerBackdrop.style.pointerEvents='auto'; picker.setAttribute('aria-hidden','false'); pickerBackdrop.setAttribute('aria-hidden','false'); updateWheelCenter(); }
+    function closePicker(){ picker.classList.remove('open'); pickerBackdrop.style.opacity='0'; pickerBackdrop.style.pointerEvents='none'; picker.setAttribute('aria-hidden','true'); pickerBackdrop.setAttribute('aria-hidden','true'); }
+
+    openPickerBtn.addEventListener('click', ()=> openPicker());
+    pickerBackdrop.addEventListener('click', ()=> closePicker());
+    pickerCancel.addEventListener('click', ()=> closePicker());
+    pickerOk.addEventListener('click', async ()=> {
+      const region = REGIONS[selectedIndex];
+      if(region) await chooseRegion(region);
+      closePicker();
+    });
+
+    /***** ========== CHOOSE REGION (lazy load + cache) ========== *****/
+    async function chooseRegion(region){
+      current = region;
+      const cached = cache[region.id];
+      if(cached && isFresh(cached)){ renderHeroFromData(cached.data); smoothToTop(); return; }
+      regionTitle.textContent = region.name;
+      condText.textContent = 'Yuklanmoqda...';
+      try{
+        const d = await fetchForecast(region.q, 7);
+        cache[region.id] = {ts:Date.now(), data:d}; saveCache();
+        renderHeroFromData(d);
+        smoothToTop();
+      }catch(e){
+        console.error(e); condText.textContent = 'Ma\'lumot olinmadi';
+      }
+    }
+
+    function smoothToTop(){ // ensure hero visible when selecting a region
+      safeArea.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    /***** ========== LOCATION BUTTON ========== *****/
+    locBtn.addEventListener('click', ()=>{
+      if(!navigator.geolocation){ alert('Brauzeringiz joylashuvni qo\'llab-quvvatlamaydi'); return; }
+      locBtn.textContent = '⏳';
+      navigator.geolocation.getCurrentPosition(async (pos)=>{
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
+        try{
+          const d = await fetchForecast(`${lat},${lon}`, 7);
+          cache['__mypos'] = {ts:Date.now(), data:d}; saveCache(); renderHeroFromData(d); current = {id:'__mypos', name: d.location.name, q:`${lat},${lon}`};
+        }catch(e){ alert('Joylashuv bo\'yicha ma\'lumot olinmadi'); console.error(e); }
+        locBtn.textContent = '📍';
+      }, (err)=>{ alert('Joylashuvga ruxsat berilmadi'); locBtn.textContent = '📍'; }, {enableHighAccuracy:true, timeout:12000});
+    });
+
+    /***** ========== THEME ========== *****/
+    themeBtn.addEventListener('click', ()=>{ theme = (theme==='light')?'dark':'light'; applyTheme(); });
+    function applyTheme(){ if(theme==='dark'){ body.classList.add('theme-dark'); picker.classList.add('dark'); } else { body.classList.remove('theme-dark'); picker.classList.remove('dark'); } localStorage.setItem('v24_theme', theme); themeBtn.textContent = (theme==='dark') ? '🌞' : '🌙'; }
+
+    /***** ========== INIT ========== *****/
+    async function init(){
+      buildWheel();
+      clearHero();
+      // load default or cached default
+      const cached = cache[DEFAULT.id];
+      if(cached && isFresh(cached)){ renderHeroFromData(cached.data); }
+      else {
+        regionTitle.textContent = DEFAULT.name;
+        condText.textContent = 'Yuklanmoqda...';
+        try{
+          const d = await fetchForecast(DEFAULT.q, 7);
+          cache[DEFAULT.id] = {ts:Date.now(), data:d}; saveCache(); renderHeroFromData(d);
+        }catch(e){ condText.textContent = 'Ma\'lumot olinmadi'; console.error(e); }
+      }
+      // restore theme
+      const s = localStorage.getItem('v24_theme'); if(s) { theme = s; applyTheme(); }
+    }
+
+    init();
+
+    // expose debug
+    window._v24 = {REGIONS, cache};
+
+    // keyboard accessibility for wheel
+    wheel.addEventListener('keydown', (e)=>{
+      if(e.key === 'ArrowDown'){ scrollToIndex(Math.min(REGIONS.length-1, selectedIndex+1)); e.preventDefault(); }
+      if(e.key === 'ArrowUp'){ scrollToIndex(Math.max(0, selectedIndex-1)); e.preventDefault(); }
+      if(e.key === 'Enter'){ pickerOk.click(); }
+    });
+
+    // prevent accidental horizontal pan
+    window.addEventListener('touchmove', ()=>{}, {passive:true});
+  </script>
+</body>
+</html>
